@@ -6,8 +6,8 @@ import numpy as np
 # ====================================================================================================
 # Variables auxiliares
 # ====================================================================================================
-# Define la probabilidad de que una persona sufra un siniestro en un año y el costo de este
-p = 0.01
+# Define la probabilidad de que una persona sufra un siniestro (por 1, 1.5 y 2 millas) en un año y el costo de este
+p = [0.01,0.02,0.025]
 c = 1000
 # Define las matrices de costos de camiones correspondientes a cada problema (es lo unico que cambia entre cada inciso)
 costosCam = [np.array([
@@ -44,6 +44,20 @@ def indice(i, j, k):
     ind = i*cardJ*cardK + j*cardK + k  
     return ind
 
+# Define un tensor para representar las probabilidades de un siniestro al ir del area j a la escuela k por inciso s
+# Para trabajar el indexado-0 de python consideramos que los incisos son 0,1,2 en vez de 1,3,4
+probs = np.zeros((cardJ, cardK, 3))
+for j in range(cardJ):
+    for k in range(cardK):
+        for s in range(3):
+            if costosCam[0][j, k] == 0 :    # Primera condición
+                probs[j, k, s] = p[0]  
+            if s > 0 and costosCam[1][j, k] == 0 and costosCam[0][j, k] != 0: # Segunda condición
+                probs[j, k, s] = p[1]  
+            if s > 1 and costosCam[2][j, k] == 0 and costosCam[1][j, k] != 0 and costosCam[0][j, k] != 0:   # Tercera condición
+                probs[j, k, s] = p[2] 
+
+
 
 
 # ====================================================================================================
@@ -57,8 +71,7 @@ for i in range(cardI):
     for j in range(cardJ):
         for k in range(cardK):
             for s in range(3):
-                numSinis[s] += sols[s].x[indice(i,j,k)] if costosCam[s][j,k]==0 else 0
-numSinis = [p*numSini for numSini in numSinis]
+                numSinis[s] += probs[j,k,s]*sols[s].x[indice(i,j,k)] if costosCam[s][j,k]==0 else 0
 # Calcula los costos de esos siniestros
 costoSinis = [c*numSini for numSini in numSinis]
 # Imprime informacion
@@ -87,7 +100,7 @@ for s in range(3):
         for j in range(cardJ):
             for k in range(cardK):
                 costos[indice(i,j,k)] = costosCam[s][j,k]
-                costos[indice(i,j,k)] += p*c if costosCam[s][j,k]==0 else 0
+                costos[indice(i,j,k)] += probs[j,k,s]*c if costosCam[s][j,k]==0 else 0
     costosTot[s] =incisosABC.sol(costosCam[s], False).fun
     costosTotSinis[s] = incisosABC.sol(costosCam[s], False, costos).fun
 # Imprimimos la info
